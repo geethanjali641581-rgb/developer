@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EchoVerse Audiobook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0f172a; /* slate-900 */
+      --panel:#111827ee; /* gray-900 */
+      --muted:#94a3b8; /* slate-400 */
+      --text:#e5e7eb; /* gray-200 */
+      --brand:#22d3ee; /* cyan-400 */
+      --brand-2:#a78bfa; /* violet-400 */
+      --success:#34d399; /* green-400 */
+      --danger:#fb7185; /* rose-400 */
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+      background: radial-gradient(1200px 600px at 20% -20%, #1f2937, transparent),
+                  radial-gradient(900px 500px at 120% 10%, #0e7490, transparent),
+                  var(--bg);
+      color:var(--text);
+      min-height:100dvh;
+    }
+    header{ padding:28px 20px 8px; text-align:center }
+    h1{ font-size: clamp(1.5rem, 1.2rem + 2.5vw, 2.4rem); margin:0; font-weight:800; letter-spacing:.2px }
+    .subtitle{ color:var(--muted); margin-top:6px }
+    .container{ max-width:1100px; margin:20px auto 60px; padding:0 16px }
+    .grid{ display:grid; grid-template-columns:1fr; gap:16px }
+    @media(min-width:960px){ .grid{ grid-template-columns:1fr 1fr } }
+    .card{ background:linear-gradient(180deg, rgba(17,24,39,.9), rgba(17,24,39,.75));
+           border:1px solid rgba(148,163,184,.18);
+           box-shadow:0 10px 30px rgba(0,0,0,.25);
+           border-radius:18px; padding:16px }
+    textarea{ width:100%; min-height:220px; resize:vertical; border-radius:12px; padding:12px 14px;
+              border:1px solid rgba(148,163,184,.25); background:#0b1220; color:var(--text);
+              outline:none; box-shadow: inset 0 0 0 1px rgba(255,255,255,0);
+    }
+    textarea:focus{ border-color:var(--brand); box-shadow:0 0 0 3px rgba(34,211,238,.15) }
+    .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:10px 0 }
+    .select, .input{ background:#0b1220; color:var(--text); border:1px solid rgba(148,163,184,.25); border-radius:12px; padding:10px 12px }
+    .btn{ border:0; padding:10px 14px; border-radius:14px; font-weight:600; cursor:pointer; transition:.2s transform, .2s opacity }
+    .btn:disabled{ opacity:.5; cursor:not-allowed }
+    .btn-primary{ background:linear-gradient(90deg, var(--brand), var(--brand-2)); color:#020617 }
+    .btn-ghost{ background:transparent; border:1px solid rgba(148,163,184,.25); color:var(--text) }
+    .btn-success{ background: var(--success); color:#052e1b }
+    .btn-danger{ background: var(--danger); color:#3b0a0f }
+
+    .panes{ display:grid; grid-template-columns:1fr; gap:16px }
+    @media(min-width:960px){ .panes{ grid-template-columns:1fr 1fr } }
+    .pane h3{ margin:0 0 8px; font-size:1rem; color:var(--muted); font-weight:600; display:flex; align-items:center; gap:8px }
+    .badge{ font-size:.7rem; padding:4px 8px; border-radius:999px; background:#0b1220; border:1px solid rgba(148,163,184,.25) }
+    .audio-wrap{ background: #0b1220; border:1px solid rgba(148,163,184,.25); border-radius:14px; padding:12px }
+    .row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap }
+    .spacer{ height:6px }
+    footer{ text-align:center; color:var(--muted); padding:24px; font-size:.85rem }
+    .tiny{ font-size:.8rem; color:var(--muted) }
+    .hidden{ display:none }
+    .notice{ font-size:.9rem; color:var(--muted) }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>EchoVerse Audiobook</h1>
+    <div class="subtitle">Tone‑adaptive text → voice. Side‑by‑side comparison. Stream & download.</div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="controls">
+        <label>
+          <span class="tiny">Tone</span><br>
+          <select id="tone" class="select">
+            <option>Neutral</option>
+            <option>Suspenseful</option>
+            <option>Inspiring</option>
+          </select>
+        </label>
+        <label>
+          <span class="tiny">Voice (browser or IBM)</span><br>
+          <select id="voice" class="select"></select>
+        </label>
+        <button class="btn btn-primary" id="rewriteBtn">Rewrite Text</button>
+        <button class="btn btn-success" id="ttsBtn" disabled>Generate Audio</button>
+        <button class="btn btn-danger" id="stopBtn" disabled>Stop</button>
+        <button class="btn btn-ghost" id="downloadBtn" disabled>Download MP3</button>
+        <button class="btn btn-ghost" id="clearBtn">Clear</button>
+      </div>
+
+      <div class="panes">
+        <div class="pane">
+          <h3>Original <span class="badge">input</span></h3>
+          <textarea id="inputText" placeholder="Paste or type your narration here…"></textarea>
+        </div>
+        <div class="pane">
+          <h3>Tone‑adapted <span class="badge" id="toneBadge">Neutral</span></h3>
+          <textarea id="rewrittenText" placeholder="Click ‘Rewrite Text’ to transform…"></textarea>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="audio-wrap">
+        <div class="row">
+          <audio id="player" controls></audio>
+          <div class="notice" id="modeNote"></div>
+        </div>
+      </div>
+      <div class="tiny" style="margin-top:8px">
+        Demo works fully offline using your browser's voices. For downloadable MP3, connect IBM Watson Text‑to‑Speech via the config block in the code (see comments).
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Built for the “EchoVerse” concept. No keys stored client‑side. Plug your own backend to use IBM watsonx + Watson TTS.
+  </footer>
+
+<script>
+/***********************
+ * CONFIGURATION
+ ***********************/
+const CONFIG = {
+  DEMO_MODE: true, // when true, uses browser SpeechSynthesis only (no downloads)
+  // When you have a backend, set DEMO_MODE:false and implement these endpoints securely on your server.
+  endpoints: {
+    rewrite: "/api/rewrite", // POST { text, tone } -> { text }
+    tts: "/api/tts" // POST { text, voice } -> binary mp3
+  }
+};
+
+/***********************
+ * STATE
+ ***********************/
+const els = {
+  input: document.getElementById('inputText'),
+  output: document.getElementById('rewrittenText'),
+  tone: document.getElementById('tone'),
+  toneBadge: document.getElementById('toneBadge'),
+  voice: document.getElementById('voice'),
+  rewriteBtn: document.getElementById('rewriteBtn'),
+  ttsBtn: document.getElementById('ttsBtn'),
+  stopBtn: document.getElementById('stopBtn'),
+  downloadBtn: document.getElementById('downloadBtn'),
+  player: document.getElementById('player'),
+  clearBtn: document.getElementById('clearBtn'),
+  modeNote: document.getElementById('modeNote'),
+};
+
+let currentBlobUrl = null;
+let currentMediaRecorder = null; // reserved if you later stream TTS
+
+/***********************
+ * UTILITIES
+ ***********************/
+function saveDraft(){
+  localStorage.setItem('echoverse:input', els.input.value);
+  localStorage.setItem('echoverse:output', els.output.value);
+  localStorage.setItem('echoverse:tone', els.tone.value);
+}
+function loadDraft(){
+  const i = localStorage.getItem('echoverse:input') || '';
+  const o = localStorage.getItem('echoverse:output') || '';
+  const t = localStorage.getItem('echoverse:tone') || 'Neutral';
+  els.input.value = i; els.output.value = o; els.tone.value = t; els.toneBadge.textContent = t;
+}
+function setPlayerBlob(blob){
+  if(currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+  currentBlobUrl = URL.createObjectURL(blob);
+  els.player.src = currentBlobUrl;
+}
+function setBusy(b){
+  [els.rewriteBtn, els.ttsBtn, els.stopBtn, els.downloadBtn, els.clearBtn, els.tone, els.voice].forEach(el=>{
+    if(el===els.stopBtn) return;
+    el.disabled = !!b;
+  });
+}
+
+/***********************
+ * TONE REWRITER
+ * Demo uses simple templates. Replace with server call to watsonx LLM.
+ ***********************/
+function templateRewrite(text, tone){
+  if(!text.trim()) return '';
+  const lines = text.split(/\n\n+/).map(p=>p.trim());
+  const fx = {
+    Neutral: p => p,
+    Suspenseful: p => `The air tightens as ${p.replace(/\b(he|she|they)\b/gi, '$1').replace(/\./g, '…')} Keep listening.`,
+    Inspiring: p => `${p} Remember: every step forward is progress, and you are capable of far more than you know.`,
+  };
+  const f = fx[tone] || fx.Neutral;
+  return lines.map(f).join('\n\n');
+}
+
+async function rewrite(){
+  const tone = els.tone.value; els.toneBadge.textContent = tone;
+  const text = els.input.value;
+  els.output.value = '';
+  setBusy(true);
+  try{
+    let rewritten;
+    if(CONFIG.DEMO_MODE){
+      rewritten = templateRewrite(text, tone);
+    } else {
+      const res = await fetch(CONFIG.endpoints.rewrite, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text, tone}) });
+      if(!res.ok) throw new Error('Rewrite failed');
+      const data = await res.json();
+      rewritten = data.text;
+    }
+    els.output.value = rewritten || '';
+  } catch(err){
+    alert(err.message);
+  } finally {
+    setBusy(false); saveDraft(); updateButtons();
+  }
+}
+
+/***********************
+ * TEXT‑TO‑SPEECH
+ * Demo uses Web Speech API. For IBM Watson TTS, call your backend (see below).
+ ***********************/
+let speaking = false; let utterance = null;
+function populateVoices(){
+  const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  els.voice.innerHTML = '';
+  if(CONFIG.DEMO_MODE){
+    if(voices.length===0){
+      const opt = document.createElement('option');
+      opt.textContent = 'System Default'; opt.value = '';
+      els.voice.appendChild(opt);
+    } else {
+      voices.forEach(v=>{
+        const opt = document.createElement('option');
+        opt.value = v.name; opt.textContent = `${v.name} (${v.lang})`;
+        els.voice.appendChild(opt);
+      });
+    }
+  } else {
+    // When wired to IBM TTS, populate your server‑reported voices here.
+    ['Allison (en-US)', 'Michael (en-US)', 'Lisa (en-US)'].forEach(name=>{
+      const opt = document.createElement('option'); opt.value = name; opt.textContent = name; els.voice.appendChild(opt);
+    });
+  }
+}
+
+async function tts(){
+  const text = (els.output.value || els.input.value).trim();
+  if(!text){ alert('Nothing to speak.'); return; }
+  setBusy(true); els.stopBtn.disabled = false; els.ttsBtn.disabled = true; speaking = true;
+
+  try{
+    if(CONFIG.DEMO_MODE){
+      if(!('speechSynthesis' in window)) throw new Error('Speech Synthesis not supported in this browser');
+      utterance = new SpeechSynthesisUtterance(text);
+      const name = els.voice.value;
+      const voice = speechSynthesis.getVoices().find(v=>v.name===name);
+      if(voice) utterance.voice = voice;
+      utterance.rate = 1.02; utterance.pitch = 1.0; utterance.onend = () => { speaking = false; updateButtons(); };
+      speechSynthesis.cancel(); speechSynthesis.speak(utterance);
+      els.modeNote.textContent = 'Demo mode: streaming to speakers only (no downloadable file).';
+      els.downloadBtn.disabled = true;
+    } else {
+      const res = await fetch(CONFIG.endpoints.tts, { method:'POST', body: JSON.stringify({ text, voice: els.voice.value }), headers: {'Content-Type':'application/json'} });
+      if(!res.ok) throw new Error('TTS request failed');
+      const arrayBuf = await res.arrayBuffer();
+      const blob = new Blob([arrayBuf], { type:'audio/mpeg' });
+      setPlayerBlob(blob);
+      els.modeNote.textContent = 'API mode: audio ready. You can stream or download the MP3.';
+      els.downloadBtn.disabled = false;
+    }
+  } catch(err){
+    alert(err.message);
+  } finally{
+    setBusy(false); els.stopBtn.disabled = !speaking; updateButtons();
+  }
+}
+
+function stopTTS(){
+  if(CONFIG.DEMO_MODE && window.speechSynthesis){ speechSynthesis.cancel(); speaking=false; }
+  els.stopBtn.disabled = true; updateButtons();
+}
+
+function download(){
+  if(CONFIG.DEMO_MODE){
+    alert('Download requires IBM Watson TTS via your server (demo mode cannot download).');
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = els.player.src; a.download = `echoverse_${Date.now()}.mp3`; a.click();
+}
+
+function updateButtons(){
+  const hasText = (els.input.value.trim().length + els.output.value.trim().length) > 0;
+  els.ttsBtn.disabled = !hasText || speaking;
+}
+
+/***********************
+ * WIRES
+ ***********************/
+loadDraft();
+if('speechSynthesis' in window){ speechSynthesis.onvoiceschanged = populateVoices; }
+populateVoices();
+els.modeNote.textContent = CONFIG.DEMO_MODE ? 'Demo mode: browser voices enabled.' : 'API mode: using your server for LLM rewrite + IBM TTS.';
+
+els.rewriteBtn.addEventListener('click', rewrite);
+els.ttsBtn.addEventListener('click', tts);
+els.stopBtn.addEventListener('click', stopTTS);
+els.downloadBtn.addEventListener('click', download);
+els.clearBtn.addEventListener('click', () => { els.input.value=''; els.output.value=''; saveDraft(); updateButtons(); });
+els.input.addEventListener('input', ()=>{ saveDraft(); updateButtons(); });
+els.output.addEventListener('input', ()=>{ saveDraft(); updateButtons(); });
+els.tone.addEventListener('change', ()=>{ els.toneBadge.textContent = els.tone.value; saveDraft(); });
+</script>
+</body>
+</html>
